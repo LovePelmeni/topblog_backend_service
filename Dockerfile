@@ -22,8 +22,6 @@ COPY ./proj_requirements/ ./
 COPY ./models ./models
 COPY ./key_generator ./key_generator
 COPY ./photos ./photos
-COPY ./analytics ./analytics
-COPY ./parsers ./parsers
 COPY ./rest ./rest
 COPY ./tests ./tests
 COPY __init__.py ./__init__.py
