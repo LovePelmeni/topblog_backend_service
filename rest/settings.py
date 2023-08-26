@@ -1,18 +1,8 @@
 import logging
-import definitions
-
 logger = logging.getLogger(__name__)
-file_handler = logging.FileHandler(
-    filename=definitions.ROOT_DIR + "/logs/settings.log")
+
+file_handler = logging.FileHandler(filename="startup.log")
 logger.addHandler(file_handler)
-
-
-try:
-    open("../experiments/current_experiment/models/baseline_classifier.pkl", mode='rb')
-except(FileNotFoundError) as model_file_err:
-    raise SystemExit(
-        "ML Model File does not exist"
-    )
 
 try:
     import fastapi
@@ -43,22 +33,30 @@ application = fastapi.FastAPI(
 
 try:
     # Adding Middlewares
+
     application.add_middleware(
         middleware_class=cors.CORSMiddleware,
-        allowed_hosts=[
+        allow_origins=[
             host for host in ALLOWED_HOSTS] if ALLOWED_HOSTS else ["*"],
-        allowed_headers=[
+        allow_headers=[
             header for header in ALLOWED_HEADERS] if ALLOWED_HEADERS else ["*"],
-        allowed_methods=["POST", "OPTIONS", "GET"]
+        allow_methods=["POST", "OPTIONS", "GET"]
     )
 
     # Adding Rest Endpoints
 
     application.add_api_route(
-        path="/predict/news/tags/",
-        methods=["POST"],
-        endpoint=controllers.predict_news_classification_tags,
-        description="API Endpoint for classifying news"
+        path='/healthcheck/',
+        methods=['GET'],
+        endpoint=controllers.healthcheck,
+        description="Standard Heathcheck REST Endpoint"
+    )
+
+    application.add_api_route(
+        path='/api/analyze/',
+        methods=['POST'],
+        endpoint=controllers.analyze_social_media_acrhive,
+        description='Analyzes given screenshot files'
     )
 
 except (fastapi.exceptions.FastAPIError, AttributeError, IndexError) as err:

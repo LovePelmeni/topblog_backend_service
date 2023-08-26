@@ -1,12 +1,11 @@
 FROM python:3.10-bullseye
-LABEL author=kirklimushin@gmail.com 
+LABEL author=Dynamical_LR_TEAM
 RUN echo "Building project... Relax and get some 🍺"
 
 # Root user credentials 
 ARG ROOT_USER=python_user
 
 # Environment Project Variables
-ENV POETRY_VIRTUALENVS_CREATE=false
 ENV PYTHONUNBUFFERED=0
 
 # Creating custom user
@@ -18,30 +17,30 @@ WORKDIR /project/dir/${ROOT_USER}
 
 # copying project source 
 
-COPY ./src ./src
-COPY ./proj_requirements/prod_requirements.txt ./
-COPY ./definitions.py ./
+COPY ./env_vars ./env_vars
+COPY ./proj_requirements/ ./
+COPY ./models ./models
+COPY ./key_generator ./key_generator
+COPY ./photos ./photos
+COPY ./analytics ./analytics
+COPY ./parsers ./parsers
 COPY ./rest ./rest
 COPY ./tests ./tests
 COPY __init__.py ./__init__.py
-COPY deployment/entrypoint.sh ./
-COPY ./tox.ini ./
+COPY entrypoint.sh ./entrypoint.sh
 
 # updating pip installer and installing gcc lib for more reliable project 
 # compilation
-RUN pip install --upgrade pip && apt-get install gcc
 
-# installing poetry package manager
-RUN pip install poetry
+RUN pip install --upgrade pip
+RUN apt-get install gcc
 
-RUN poetry install --no-dev && poetry export --format=requirements.txt \
---output=prod_requirements.txt --without-hashes
+# Installing Production requirements inside python project
+RUN pip install -r prod_requirements.txt 
 
-RUN pip install -r prod_requirements.txt && pip install 'fastapi[all]' --upgrade
+# Upgrading Python Package
+RUN pip install 'fastapi[all]' --upgrade
 
-RUN chmod +x definitions.py
+# Giving Permissions for running entrypoint shell script
 RUN chmod +x entrypoint.sh
-RUN chmod +x definitions.py
-
-RUN python definitions.py
 ENTRYPOINT ["sh", "entrypoint.sh"]
