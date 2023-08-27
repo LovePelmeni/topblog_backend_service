@@ -1,5 +1,4 @@
 import easyocr
-from PIL import Image
 
 import re
 import os
@@ -10,13 +9,12 @@ import matplotlib.patches as patches
 
 from pathlib import Path
 import math
-import typing
 
-class TextDetectionModel(object):
+class TextDetectionModel():
     def __init__(self):
         self.reader = easyocr.Reader(['ru', 'en'])
 
-    def process_image(self, path, type_of_social: typing.Literal['zn', 'yt', 'tg', 'vk'], show=False):
+    def process_image(self, path, type_of_social, show=False):
         path_tmp = self.upscale_photo(path, 'tmp')
         result_of_process = self.reader.readtext(path, paragraph=False)
 
@@ -24,7 +22,7 @@ class TextDetectionModel(object):
             ValueError("Не удалось распознать текст")
             return None
         data = self.transform_data(result_of_process)
-
+        print(result_of_process)
         result = self.filters(data, type_of_social)
         if show:
             self.plot(path, result_of_process)
@@ -45,6 +43,7 @@ class TextDetectionModel(object):
 
                 elif type_of_social=='yt2' and (self.get_numbers(row["label"]) or self.convert_to_number(row["label"])):
                     target_center = (text_key["coordinates"][0][1] + text_key["coordinates"][2][1]) / 2
+
                     if abs(target_center - ((row["coordinates"][0][1] + row["coordinates"][2][1]) / 2)) < 20:
                         if row["coordinates"][0][0] > text_key["coordinates"][2][0]:
                             distance = self.calculate_distance(text_key["coordinates"], row["coordinates"])
@@ -66,20 +65,27 @@ class TextDetectionModel(object):
                           closest_distance = distance
                           closest_row = row
 
-                elif type_of_social=='yt2' and self.get_numbers(row["label"]):
+                elif type_of_social=='yt1' and self.get_numbers(row["label"]):
                     distance = self.calculate_distance(text_key["coordinates"], row["coordinates"])
 
                     if distance < closest_distance:
                         closest_distance = distance
                         closest_row = row
 
+        if not(closest_row):
+            return None
+
         if type_of_social=='yt2' and self.convert_to_number(closest_row['label']):
+            print('В этом bounding box цифра: ', closest_row['coordinates'])
             return self.convert_to_number(closest_row['label'])
         if type_of_social=='vk' and self.convert_short_numbers_with_k(closest_row['label']):
+            print('В этом bounding box цифра: ', closest_row['coordinates'])
             return self.convert_short_numbers_with_k(closest_row['label'])
-        if type_of_social=='tg' and self.is_percent_number(closest_row['label']):
+        if type_of_social=='tg' and closest_row and self.is_percent_number(closest_row['label']):
+            print('В этом bounding box цифра: ', closest_row['coordinates'])
             return self.is_percent_number(closest_row['label'])
 
+        print('В этом bounding box цифра: ', closest_row['coordinates'])
         return self.get_numbers(closest_row['label'])
 
     def plot(self, path, result_of_process):
@@ -130,17 +136,21 @@ class TextDetectionModel(object):
                 key_row = item
 
           if key_row != None:
-              return self.find_closest_number(key_row, dict_text_box)
+              return self.find_closest_number(key_row, dict_text_box, type_of_social)
 
         elif type_of_social == "yt2":
           # Ищем просмотры в YouTube
+          count_of_watchs = 0
           for item in dict_text_box:
               label = item["label"]
               if "просмотры" in label and len(re.findall(r'\w+', label)) == 1:
                   key_row = item
+                  answer = self.find_closest_number(key_row, dict_text_box, type_of_social)
+                  if answer:
+                    count_of_watchs = max(count_of_watchs, answer)
 
-          if key_row != None:
-              return self.find_closest_number(key_row, dict_text_box, type_of_social)
+          if count_of_watchs != 0:
+              return count_of_watchs
 
         elif type_of_social == 'tg':
           for item in dict_text_box:
@@ -197,6 +207,7 @@ class TextDetectionModel(object):
               label = item["label"]
               if "подписчик" in label and len(re.findall(r'\w+', label)) == 1:
                   key_row_vk_2 = item
+
           if key_row_vk_2 != None:
               if self.get_numbers(key_row_vk_2['label']):
                 subs_2_number = self.get_numbers(key_row_vk_2['label'])

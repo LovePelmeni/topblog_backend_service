@@ -16,14 +16,15 @@ from key_generator import session_key_gen
 from rest import preprocessing
 
 from models import models as ml_models
+from typing import List
 
 logger = logging.getLogger(__name__)
 file_handler = logging.FileHandler(filename='rest_controllers.log')
-logger.addHandler(logger)
+logger.addHandler(file_handler)
 
 async def analyze_social_media_acrhive(
     social_media_type: Annotated[str, Form()],
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
     ) -> resp.JSONResponse:
 
     """
@@ -38,7 +39,7 @@ async def analyze_social_media_acrhive(
                 detail="Invalid social media type"
             )
 
-        if getattr(file, 'filename') is not None:
+        if hasattr(file, 'filename') and getattr(file, 'filename') is not None:
             if not file.filename.endswith(".zip"):
                 return fastapi.exceptions.HTTPException(
                     status_code=400,
@@ -52,7 +53,7 @@ async def analyze_social_media_acrhive(
             uuid_key_string=unique_clients_key,
             archive=file
         )
-    
+        
         image_predictions = [] 
         model = ml_models.TextDetectionModel()
 
@@ -76,7 +77,7 @@ async def analyze_social_media_acrhive(
             image_predictions.append(prediction_form.dict())
 
         # removing directory with loaded photos
-        shutil.rmtree("photos/images/images_%s" % unique_clients_key)
+        shutil.rmtree("photos/images/images_%s/images/" % unique_clients_key)
 
         return fastapi.responses.JSONResponse(
             status_code=201,
@@ -85,6 +86,7 @@ async def analyze_social_media_acrhive(
 
     except Exception as err:
         logger.error(err)
+        raise err
         raise fastapi.exceptions.HTTPException(
             status_code=500,
             detail="Internal Server Error"

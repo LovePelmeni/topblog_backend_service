@@ -9,6 +9,22 @@ logger = logging.getLogger("rest_form_logger")
 file_handler = logging.FileHandler(filename='rest_form.log')
 logger.addHandler(file_handler)
 
+def folder_contains_png(folder_path):
+    for _, _, files in os.walk(folder_path):
+        for file in files:
+            if file.lower().endswith('.png'):
+                return True
+    return False
+
+def find_folders_with_image_files(root_path):
+    folders_with_png = []
+    for root, dirs, _ in os.walk(root_path):
+        for dir_name in dirs:
+            dir_path = os.path.join(root, dir_name)
+            if folder_contains_png(dir_path):
+                folders_with_png.append(dir_path)
+    return folders_with_png
+
 
 def unzip_archive(
     unpack_path: str,
